@@ -14,6 +14,15 @@ const PLUGIN_NAME = 'obsidian-sqlite-sync';
 const VAULT_PATH =
   '/Users/michaelsageryd/Library/Mobile Documents/iCloud~md~obsidian/Documents/the-vault/.obsidian/plugins';
 
+async function copyManifest() {
+  try {
+    await copyFile('src/manifest.json', 'build/manifest.json');
+    console.log('manifest.json copied successfully to the build folder.');
+  } catch (error) {
+    console.error('Error copying manifest.json:', error);
+  }
+}
+
 async function copyToVault() {
   const pluginDir = join(VAULT_PATH, PLUGIN_NAME);
   const filesToCopy = ['main.js', 'manifest.json'];
@@ -39,6 +48,9 @@ const prod = process.argv[2] === 'production';
 
 // Ensure build directory exists
 await mkdir('build', { recursive: true });
+
+// Copy manifest.json before the build process
+await copyManifest();
 
 const context = await esbuild.context({
   banner: {

@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-sqlite-sync",
+  "name": "SQLite Sync",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "A plugin for Obsidian SQLite synchronization",
+  "author": "Michael Sageryd",
+  "authorUrl": "https://github.com/yourusername",
+  "isDesktopOnly": true,
+  "js": "main.js"
+}
