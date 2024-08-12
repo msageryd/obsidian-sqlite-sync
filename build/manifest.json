@@ -1,5 +1,5 @@
 {
-  "id": "obsidian-sqllite-sync",
+  "id": "obsidian-sqlite-sync",
   "name": "SQLite Sync",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",

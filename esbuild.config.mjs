@@ -10,7 +10,7 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const PLUGIN_NAME = 'obsidian-sqllite-sync';
+const PLUGIN_NAME = 'obsidian-sqlite-sync';
 const VAULT_PATH =
   '/Users/michaelsageryd/Library/Mobile Documents/iCloud~md~obsidian/Documents/the-vault/.obsidian/plugins';
 
@@ -25,7 +25,9 @@ async function copyToVault() {
       console.log(`${file} copied successfully to the Obsidian vault.`);
     } catch (error) {
       if (error.code === 'ENOENT') {
-        console.warn(`Warning: ${file} does not exist in the build folder and was not copied.`);
+        console.warn(
+          `Warning: ${file} does not exist in the build folder and was not copied.`
+        );
       } else {
         console.error(`Error copying ${file}:`, error);
       }
