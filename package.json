@@ -1,0 +1,22 @@
+{
+  "name": "obsidian-sqlite-sync",
+  "version": "1.0.0",
+  "description": "A plugin for Obsidian SQLite synchronization",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "sqlite",
+    "sync"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.17.19"
+  }
+}
