@@ -133,7 +133,7 @@ class DatabaseHandler {
     await this.updateNoteTags(fileInfo);
 
     // Update note_frontmatter relationships
-    await this.updateNoteFrontmatter(fileInfo);
+    // await this.updateNoteFrontmatter(fileInfo);
   }
 
   async deleteNote(path) {
@@ -147,28 +147,32 @@ class DatabaseHandler {
   async updateNoteTags(fileInfo) {
     const { path, tags } = fileInfo;
 
-    // Remove existing note_tag entries for this note
-    const deleteNoteTagsSQL = `
-      DELETE FROM note_tag 
-      WHERE note_path = '${this.escapeSQLString(path)}'
-    `;
-    await this.executeSQL(deleteNoteTagsSQL);
-
-    // Insert new note_tag entries
-    for (let tag of tags) {
+    tags = tags.map((tag) => {
       if (tag.startsWith('#')) {
         tag = tag.slice(1);
       }
       tag = this.escapeSQLString(tag);
+      return tag;
+    });
 
-      const insertNoteTagSQL = `
-        INSERT INTO note_tag 
-        (note_path, tag_name, tag_name_lower) 
-        VALUES 
-        ('${this.escapeSQLString(path)}', '${tag}', '${tag.toLowerCase()}')
-      `;
-      await this.executeSQL(insertNoteTagSQL);
-    }
+    const updateTagsSQL = dbSql.getUpdateTagsSQL(fileInfo, tags);
+    await this.executeSQL(updateTagsSQL);
+
+    // // Insert new note_tag entries
+    // for (let tag of tags) {
+    //   if (tag.startsWith('#')) {
+    //     tag = tag.slice(1);
+    //   }
+    //   tag = this.escapeSQLString(tag);
+
+    //   const insertNoteTagSQL = `
+    //     INSERT INTO note_tag
+    //     (note_path, tag_name, tag_name_lower)
+    //     VALUES
+    //     ('${this.escapeSQLString(path)}', '${tag}', '${tag.toLowerCase()}')
+    //   `;
+    //   await this.executeSQL(insertNoteTagSQL);
+    // }
   }
 
   async updateNoteFrontmatter(fileInfo) {

@@ -1,8 +1,8 @@
-const SQLiteAdapter = require('./db');
+const SQLiteAdapter = require('../src/db');
 const fs = require('fs').promises;
 const path = require('path');
 
-async function runDiagnostics() {
+async function main() {
   console.log('Running SQLite Diagnostics');
   const dbPath = './test/diags.sqlite';
   let sqlite;
@@ -72,4 +72,4 @@ async function runDiagnostics() {
   }
 }
 
-runDiagnostics();
+main();

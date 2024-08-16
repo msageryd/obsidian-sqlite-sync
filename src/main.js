@@ -1,13 +1,12 @@
 const { Plugin, TFile, Notice } = require('obsidian');
-// const DatabaseHandler = require('./DatabaseHandler');
 const path = require('path');
 const SQLiteExecutor = require('./db');
 
 module.exports = class ObsidianSqliteSync extends Plugin {
-  async onload() {
-    console.log('loading ObsidianSqliteSync plugin');
+  isInitialized = false;
 
-    const startTime = performance.now();
+  async onload() {
+    console.log('[SQLite-sync] Loading Obsidian-sqlite-sync plugin');
 
     try {
       const pluginDir = path.join(
@@ -19,6 +18,50 @@ module.exports = class ObsidianSqliteSync extends Plugin {
       );
 
       this.db = await SQLiteExecutor.create(pluginDir);
+    } catch (error) {
+      console.error('[SQLite-sync] Failed to initialize sqlite3:', error);
+      new Notice(
+        'Failed to initialize SQLite database. Check console for details.',
+        5000
+      );
+    }
+
+    console.log('[SQLite-sync] Waiting for Obsidian to load cache');
+
+    this.app.metadataCache.on('resolved', async () => {
+      if (this.isInitialized) {
+        return;
+      }
+
+      console.log(
+        '[SQLite-sync] Metadata cache resolved event triggered, starting initialization'
+      );
+      try {
+        // Perform a full sync on load
+        const startTime = performance.now();
+        await this.fullSync();
+
+        const endTime = performance.now();
+        const totalTime = endTime - startTime;
+        const formattedTime =
+          totalTime >= 1000
+            ? `${(totalTime / 1000).toFixed(2)} seconds`
+            : `${Math.round(totalTime)} milliseconds`;
+
+        console.log(
+          `[SQLite-sync] SQLite database initialized in ${formattedTime}`
+        );
+        new Notice(`SQLite database initialized in ${formattedTime}`);
+
+        this.isInitialized = true;
+        console.log('[SQLite-sync] Initialization completed');
+      } catch (error) {
+        console.error('[SQLite-sync] Failed to perform full sync:', error);
+        new Notice(
+          'Failed to initialize SQLite database. Check console for details.',
+          5000
+        );
+      }
 
       this.registerEvent(
         this.app.vault.on('modify', this.handleFileModify.bind(this))
@@ -49,38 +92,23 @@ module.exports = class ObsidianSqliteSync extends Plugin {
         this.app.workspace.on('file-open', this.handleFileOpen.bind(this))
       );
 
-      // Perform a full sync on load
-      // await this.fullSync();
-
       // Schedule periodic full syncs
       // this.registerInterval(
       //   window.setInterval(() => this.fullSync(), 60 * 60 * 1000) // Every hour
       // );
 
-      const endTime = performance.now();
-      const totalTime = endTime - startTime;
-      const formattedTime =
-        totalTime >= 1000
-          ? `${(totalTime / 1000).toFixed(2)} seconds`
-          : `${Math.round(totalTime)} milliseconds`;
-
-      new Notice(`Alfred database initialized in ${formattedTime}`);
-    } catch (error) {
-      console.error('Failed to initialize sqlite3:', error);
-      new Notice(
-        'Failed to initialize Alfred database. Check console for details.',
-        5000
-      );
-    }
+      console.log('[SQLite-sync] All events registered');
+    });
   }
 
   onunload() {
-    //
+    console.log('[SQLite-sync] Unloading Obsidian-sqlite-sync plugin');
+    this.isInitialized = false;
   }
 
   async handleFileModify(file) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('File modified:', file.path);
+      console.log('[SQLite-sync] File modified:', file.path);
       const fileInfo = await this.getFileInfo(file);
       await this.db.updateNote(fileInfo);
     }
@@ -88,7 +116,7 @@ module.exports = class ObsidianSqliteSync extends Plugin {
 
   async handleFileCreate(file) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('File created:', file.path);
+      console.log('[SQLite-sync] File created:', file.path);
       const fileInfo = await this.getFileInfo(file);
       await this.db.updateNote(fileInfo);
     }
@@ -96,14 +124,14 @@ module.exports = class ObsidianSqliteSync extends Plugin {
 
   async handleFileDelete(file) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('File deleted:', file.path);
+      console.log('[SQLite-sync] File deleted:', file.path);
       await this.db.deleteNote(file.path);
     }
   }
 
   async handleFileRename(file, oldPath) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('File renamed from', oldPath, 'to', file.path);
+      console.log('[SQLite-sync] File renamed from', oldPath, 'to', file.path);
       await this.db.deleteNote(oldPath);
       const fileInfo = await this.getFileInfo(file);
       await this.db.updateNote(fileInfo);
@@ -112,7 +140,7 @@ module.exports = class ObsidianSqliteSync extends Plugin {
 
   async handleMetadataChange(file) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('Metadata changed for file:', file.path);
+      console.log('[SQLite-sync] Metadata changed for file:', file.path);
       const fileInfo = await this.getFileInfo(file);
       await this.db.updateNote(fileInfo);
     }
@@ -120,7 +148,7 @@ module.exports = class ObsidianSqliteSync extends Plugin {
 
   async handleFileOpen(file) {
     if (file instanceof TFile && file.extension === 'md') {
-      console.log('File opened:', file.path);
+      console.log('[SQLite-sync] File opened:', file.path);
       await this.db.updateLastOpened(file.path);
     }
   }
@@ -139,8 +167,6 @@ module.exports = class ObsidianSqliteSync extends Plugin {
 
     const frontmatter = cache?.frontmatter || {};
     const content = await this.app.vault.read(file);
-
-    console.log('Cache:', cache);
 
     let tags = [];
     if (cache?.tags) {
@@ -192,14 +218,17 @@ module.exports = class ObsidianSqliteSync extends Plugin {
   }
 
   async fullSync() {
-    console.log('Performing full sync');
+    console.log('[SQLite-sync] Starting full sync');
     const files = this.app.vault.getMarkdownFiles();
 
-    for (const file of files) {
-      const fileInfo = await this.getFileInfo(file);
-      await this.db.updateNote(fileInfo);
-    }
+    const filePromiseArray = files.map(async (file) => {
+      return this.getFileInfo(file);
+    });
+    const fileInfoArray = await Promise.all(filePromiseArray);
+    await this.db.updateNote(fileInfoArray);
 
-    console.log('Full sync completed');
+    console.log(
+      `[SQLite-sync] Full sync completed, ${files.length} files processed`
+    );
   }
 };
