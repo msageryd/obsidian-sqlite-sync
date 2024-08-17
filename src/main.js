@@ -35,6 +35,7 @@ class ObsidianSqliteSyncSettingTab extends PluginSettingTab {
               .split(',')
               .map((lang) => lang.trim());
             await this.plugin.saveSettings();
+            this.app.workspace.trigger('settingchange', this.plugin.settings);
           })
       );
   }
@@ -157,6 +158,13 @@ module.exports = class ObsidianSqliteSync extends Plugin {
         })
       );
 
+      this.registerEvent(
+        this.app.workspace.on(
+          'settingchange',
+          this.handleSettingsChanged.bind(this)
+        )
+      );
+
       console.log(
         '[SQLite-sync] All events registered, now listening for changes'
       );
@@ -166,6 +174,9 @@ module.exports = class ObsidianSqliteSync extends Plugin {
   onunload() {
     console.log('[SQLite-sync] Unloading Obsidian-sqlite-sync plugin');
     this.isInitialized = false;
+  }
+  async handleSettingsChanged(settings) {
+    console.log('[SQLite-sync] Settings changed:', settings);
   }
 
   async handleFileModify(file) {
