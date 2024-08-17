@@ -1,6 +1,7 @@
-const { escapeSQLString, cleanTextForSearch } = require('./util');
 module.exports.CURRENT_VERSION = 20;
 module.exports.MIN_MIGRATION_VERSION = 18;
+
+const escapeSQLString = (str) => str.replace(/'/g, "''");
 
 // Update tags ----------------------------------------------------------------
 module.exports.getUpdateTagsSql = (fileInfoArray) => {

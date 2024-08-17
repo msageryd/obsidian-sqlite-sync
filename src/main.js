@@ -147,7 +147,9 @@ module.exports = class ObsidianSqliteSync extends Plugin {
         this.app.workspace.on('file-open', this.handleFileOpen.bind(this))
       );
 
-      console.log('[SQLite-sync] All events registered');
+      console.log(
+        '[SQLite-sync] All events registered, now listening for changes'
+      );
     });
   }
 
