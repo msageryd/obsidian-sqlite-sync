@@ -52,7 +52,7 @@ module.exports.getUpdateNoteSql = (fileInfoArray) => {
     const path = escapeSQLString(fileInfo.path);
     const title = escapeSQLString(fileInfo.title);
     const titleLower = escapeSQLString(fileInfo.title.toLowerCase());
-    const contentLower = cleanTextForSearch(fileInfo.content);
+    const contentLower = escapeSQLString(fileInfo.content);
     return `('${path}', '${title}', '${titleLower}', '${contentLower}', ${fileInfo.created}, ${fileInfo.last_modified})`;
   });
 

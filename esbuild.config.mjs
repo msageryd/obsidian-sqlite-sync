@@ -1,7 +1,7 @@
 import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'builtin-modules';
-import { copyFile, mkdir } from 'fs/promises';
+import { copyFile, mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
 const banner = `/*
@@ -18,6 +18,21 @@ async function copyManifest() {
   await copyFile('src/manifest.json', 'build/manifest.json');
 }
 
+async function copyAndTransformStopwordFiles() {
+  const stopwordDir = 'node_modules/stopword/src';
+  const buildStopwordDir = 'build/stopwords';
+  await mkdir(buildStopwordDir, { recursive: true });
+
+  const files = await readdir(stopwordDir);
+  for (const file of files) {
+    if (file.startsWith('stopwords_') && file.endsWith('.js')) {
+      const content = await readFile(join(stopwordDir, file), 'utf-8');
+      const transformedContent = content.replace(/export\s*{\s*(\w+)\s*}/g, 'module.exports = { $1 }');
+      await writeFile(join(buildStopwordDir, file), transformedContent);
+    }
+  }
+}
+
 async function copyToVault() {
   const pluginDir = join(VAULT_PATH, PLUGIN_NAME);
   const filesToCopy = ['main.js', 'manifest.json'];
@@ -29,6 +44,16 @@ async function copyToVault() {
     const destPath = join(pluginDir, file);
     await copyFile(sourcePath, destPath);
   }
+
+  // Copy stopword files to vault
+  const buildStopwordDir = resolve('build/stopwords');
+  const vaultStopwordDir = join(pluginDir, 'stopwords');
+  await mkdir(vaultStopwordDir, { recursive: true });
+
+  const files = await readdir(buildStopwordDir);
+  for (const file of files) {
+    await copyFile(join(buildStopwordDir, file), join(vaultStopwordDir, file));
+  }
 }
 
 const prod = process.argv[2] === 'production';
@@ -38,6 +63,7 @@ async function build() {
 
   await mkdir('build', { recursive: true });
   await copyManifest();
+  await copyAndTransformStopwordFiles();
 
   const context = await esbuild.context({
     banner: {

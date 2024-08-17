@@ -24,7 +24,7 @@ class SQLiteAdapter {
     console.log('[SQLite-sync] Initializing database');
     try {
       const initResult = await this.initializeDatabase();
-      this.logging && console.log(initResult.message);
+      console.log(initResult.message);
       this.isInitialized = true;
     } catch (error) {
       console.error('[SQLite-sync] Failed to initialize database:');
@@ -91,7 +91,9 @@ class SQLiteAdapter {
   async initializeDatabase() {
     let currentVersion;
     try {
-      const currentVersionResult = await this.execute(dbSql.getVersion);
+      const currentVersionResult = await this.execute(dbSql.getVersion, {
+        noInitCheck: true,
+      });
       currentVersion = parseInt(currentVersionResult) || 0;
     } catch (error) {
       this.logging &&
@@ -99,6 +101,7 @@ class SQLiteAdapter {
           '[SQLite-sync] Failed to check version table, recreating database'
         );
 
+      console.log(error);
       await this.createNewDatabase();
       return {
         status: 'created',
@@ -142,9 +145,9 @@ class SQLiteAdapter {
       if (!dbSql.migrate[v]) {
         throw new Error(`Missing migration script for version ${v}`);
       }
-      await this.execute(dbSql.migrate[v]);
+      await this.execute(dbSql.migrate[v], { noInitCheck: true });
     }
-    await this.execute(dbSql.updateVersion);
+    await this.execute(dbSql.updateVersion, { noInitCheck: true });
   }
 
   async deleteNote(path) {

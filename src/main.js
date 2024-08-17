@@ -1,23 +1,81 @@
-const { Plugin, TFile, Notice } = require('obsidian');
+const {
+  Plugin,
+  TFile,
+  Notice,
+  PluginSettingTab,
+  Setting,
+} = require('obsidian');
 const path = require('path');
 const SQLiteExecutor = require('./db');
+const TextCleaner = require('./TextCleaner');
+
+class ObsidianSqliteSyncSettingTab extends PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    containerEl.createEl('h2', { text: 'SQLite Sync Settings' });
+
+    new Setting(containerEl)
+      .setName('Stopword Languages')
+      .setDesc(
+        'Comma-separated list of language codes for stopword removal (e.g., eng,fra,deu)'
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder('eng')
+          .setValue(this.plugin.settings.stopwordLanguages.join(','))
+          .onChange(async (value) => {
+            this.plugin.settings.stopwordLanguages = value
+              .split(',')
+              .map((lang) => lang.trim());
+            await this.plugin.saveSettings();
+          })
+      );
+  }
+}
 
 module.exports = class ObsidianSqliteSync extends Plugin {
   isInitialized = false;
+  settings = {
+    stopwordLanguages: ['eng'],
+  };
+
+  async loadSettings() {
+    this.settings = Object.assign({}, this.settings, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 
   async onload() {
     console.log('[SQLite-sync] Loading Obsidian-sqlite-sync plugin');
+    const pluginRootDir = this.app.vault.adapter.getFullPath(this.manifest.dir);
+    await this.loadSettings();
+
+    this.addSettingTab(new ObsidianSqliteSyncSettingTab(this.app, this));
 
     try {
-      const pluginDir = path.join(
-        this.app.vault.adapter.basePath,
-        '.obsidian',
-        'plugins',
-        this.manifest.id,
-        'obsidian.sqlite'
+      this.textCleaner = new TextCleaner(
+        pluginRootDir,
+        this.settings.stopwordLanguages
       );
+    } catch (error) {
+      console.error('[SQLite-sync] Failed to initialize text cleaner:', error);
+      new Notice(
+        'Failed to initialize text cleaner. Check console for details.',
+        5000
+      );
+    }
 
-      this.db = await SQLiteExecutor.create(pluginDir);
+    try {
+      const dbPath = path.join(pluginRootDir, 'obsidian.sqlite');
+      this.db = await SQLiteExecutor.create(dbPath);
     } catch (error) {
       console.error('[SQLite-sync] Failed to initialize sqlite3:', error);
       new Notice(
@@ -33,9 +91,6 @@ module.exports = class ObsidianSqliteSync extends Plugin {
         return;
       }
 
-      console.log(
-        '[SQLite-sync] Metadata cache resolved event triggered, starting initialization'
-      );
       try {
         // Perform a full sync on load
         const startTime = performance.now();
@@ -91,11 +146,6 @@ module.exports = class ObsidianSqliteSync extends Plugin {
       this.registerEvent(
         this.app.workspace.on('file-open', this.handleFileOpen.bind(this))
       );
-
-      // Schedule periodic full syncs
-      // this.registerInterval(
-      //   window.setInterval(() => this.fullSync(), 60 * 60 * 1000) // Every hour
-      // );
 
       console.log('[SQLite-sync] All events registered');
     });
@@ -209,12 +259,14 @@ module.exports = class ObsidianSqliteSync extends Plugin {
       });
     }
 
-    //convert content to lowercase for case insensitive search
-    //Another solution would be to use LOWER() in SQLite, but we cannot trust that the installed sqlite3 has Unicode support
-    //Also, converting to lowercase at sync time will be more performant
-    cleanedContent = cleanedContent.toLowerCase();
+    // cleanedContent = cleanTextForSearch(
+    //   cleanedContent,
+    //   this.settings.stopwordLanguages
+    // );
 
-    return cleanedContent.trim();
+    cleanedContent = this.textCleaner.cleanTextForSearch(cleanedContent);
+
+    return cleanedContent;
   }
 
   async fullSync() {
