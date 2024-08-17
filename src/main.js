@@ -230,11 +230,11 @@ module.exports = class ObsidianSqliteSync extends Plugin {
       }
     }
 
-    const cleanedContent = this.removeMetadataAndTags(
-      content,
+    const cleanedContent = this.textCleaner.cleanTextForSearch({
+      text: content,
       frontmatter,
-      tags
-    );
+      tags,
+    });
 
     return {
       path: file.path,
@@ -245,28 +245,6 @@ module.exports = class ObsidianSqliteSync extends Plugin {
       created: file.stat.ctime,
       last_modified: file.stat.mtime,
     };
-  }
-
-  removeMetadataAndTags(content, frontmatter, tags) {
-    // Remove frontmatter
-    let cleanedContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
-
-    // Remove tags
-    if (tags) {
-      tags.forEach((tag) => {
-        const tagRegex = new RegExp(`#${tag}\\b`, 'g');
-        cleanedContent = cleanedContent.replace(tagRegex, '');
-      });
-    }
-
-    // cleanedContent = cleanTextForSearch(
-    //   cleanedContent,
-    //   this.settings.stopwordLanguages
-    // );
-
-    cleanedContent = this.textCleaner.cleanTextForSearch(cleanedContent);
-
-    return cleanedContent;
   }
 
   async fullSync() {

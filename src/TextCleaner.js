@@ -26,8 +26,21 @@ class TextCleaner {
     }, []);
   }
 
-  cleanTextForSearch(text) {
+  cleanTextForSearch({ text, tags, frontmatter }) {
     if (typeof text !== 'string') return '';
+
+    // Remove frontmatter
+    if (frontmatter) {
+      text = text.replace(/^---\n[\s\S]*?\n---\n/, '');
+    }
+
+    // Remove tags
+    if (tags) {
+      tags.forEach((tag) => {
+        const tagRegex = new RegExp(`#${tag}\\b`, 'g');
+        text = text.replace(tagRegex, '');
+      });
+    }
 
     text = text
       .toLowerCase()
