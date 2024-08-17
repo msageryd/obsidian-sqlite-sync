@@ -4,6 +4,7 @@ const {
   Notice,
   PluginSettingTab,
   Setting,
+  MarkdownView,
 } = require('obsidian');
 const path = require('path');
 const SQLiteExecutor = require('./db');
@@ -147,6 +148,15 @@ module.exports = class ObsidianSqliteSync extends Plugin {
         this.app.workspace.on('file-open', this.handleFileOpen.bind(this))
       );
 
+      this.registerEvent(
+        this.app.workspace.on('active-leaf-change', (leaf) => {
+          if (leaf.view instanceof MarkdownView) {
+            const file = leaf.view.file;
+            this.handleFileFocused(file);
+          }
+        })
+      );
+
       console.log(
         '[SQLite-sync] All events registered, now listening for changes'
       );
@@ -201,6 +211,17 @@ module.exports = class ObsidianSqliteSync extends Plugin {
   async handleFileOpen(file) {
     if (file instanceof TFile && file.extension === 'md') {
       console.log('[SQLite-sync] File opened:', file.path);
+      await this.db.updateLastOpened(file.path);
+    }
+  }
+
+  async handleFileFocused(file) {
+    //handleFileOpen seems to be called even when the file is already opened and gets focused
+    //so handleFileFocused is not needed for now
+    return;
+
+    if (file instanceof TFile && file.extension === 'md') {
+      console.log('[SQLite-sync] File focused in workspace:', file.path);
       await this.db.updateLastOpened(file.path);
     }
   }
