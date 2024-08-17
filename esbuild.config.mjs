@@ -1,7 +1,7 @@
 import esbuild from 'esbuild';
 import process from 'process';
 import builtins from 'builtin-modules';
-import { copyFile, stat, mkdir } from 'fs/promises';
+import { copyFile, mkdir } from 'fs/promises';
 import { join, resolve } from 'path';
 
 const banner = `/*

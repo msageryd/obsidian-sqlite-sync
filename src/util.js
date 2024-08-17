@@ -1,8 +1,20 @@
-const { removeStopwords, swe, eng } = require('stopword');
+const stopword = require('stopword');
+
+// Function to dynamically get language stopwords
+const getLanguageStopwords = (languages) => {
+  return languages.flatMap((lang) => {
+    if (stopword[lang]) {
+      return stopword[lang];
+    } else {
+      console.warn(`Stopwords not found for language: ${lang}`);
+      return [];
+    }
+  });
+};
 
 module.exports.escapeSQLString = (str) => str.replace(/'/g, "''");
 
-module.exports.cleanTextForSearch = (text) => {
+module.exports.cleanTextForSearch = (text, languages = ['eng']) => {
   if (typeof text !== 'string') return '';
 
   text = text
@@ -11,7 +23,8 @@ module.exports.cleanTextForSearch = (text) => {
     .replace(/\s+/g, ' ') // Replace multiple whitespace characters with a single space
     .trim(); // Remove leading and trailing whitespace
 
-  text = removeStopwords(text.split(' '), swe).join(' ');
+  const stopwords = getLanguageStopwords(languages);
+  text = stopword.removeStopwords(text.split(' '), stopwords).join(' ');
 
   return text;
 };
