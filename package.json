@@ -20,6 +20,6 @@
     "esbuild": "^0.17.19"
   },
   "dependencies": {
-    "stopword": "^3.0.1"
+    "stopword": "^3.1.1"
   }
 }
